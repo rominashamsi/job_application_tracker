@@ -29,8 +29,8 @@ class Token(BaseModel):
 class JobApplicationCreate(BaseModel):
     company : str 
     job_title : str 
-    job_url : str 
-    notes : str
+    job_url : str | None = None
+    notes : str | None = None
     salary: int | None = None
 
 class JobApplicationResponse(BaseModel):
