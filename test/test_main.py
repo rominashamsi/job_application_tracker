@@ -635,3 +635,24 @@ def test_create_job_application_with_salary(client):
     assert response.status_code == 201
     assert response.json()["salary"] == 45000
     assert response.json()["company"] == "Google"
+
+
+
+
+def test_create_job_application_without_optional_fields(client):
+    headers = _register_and_login(client)
+
+    response = client.post(
+        "/job-applications/",
+        headers=headers,
+        json={
+            "company": "Google",
+            "job_title": "Data Analyst"
+        }
+    )
+
+    assert response.status_code == 201
+
+    data = response.json()
+    assert data["job_url"] is None
+    assert data["notes"] is None

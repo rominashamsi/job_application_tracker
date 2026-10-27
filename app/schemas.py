@@ -40,8 +40,8 @@ class JobApplicationResponse(BaseModel):
     company : str 
     job_title :str
     status : str
-    job_url : str
-    notes : str 
+    job_url : str | None = None
+    notes : str | None = None
     applied_date : date
     salary: int | None
 
