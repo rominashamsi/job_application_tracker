@@ -1,6 +1,8 @@
 
 # Job Application Tracker
 
+[![Python Tests](https://github.com/rominashamsi/job_application_tracker/actions/workflows/tests.yml/badge.svg)](https://github.com/rominashamsi/job_application_tracker/actions/workflows/tests.yml)
+
 A backend application for tracking job applications, built with Python and FastAPI.
 
 ## Features
