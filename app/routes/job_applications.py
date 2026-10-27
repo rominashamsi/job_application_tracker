@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, status, HTTPException, Response
 from sqlalchemy.orm import Session
-
+from typing import Literal
 
 from ..database import get_db
 from ..dependencies import get_current_user
@@ -43,14 +43,18 @@ def create_job_application(
 
 @router.get("/", response_model=list[JobApplicationResponse])
 def get_job_applications(
+    status: Literal["applied", "interview", "offer", "rejected"] | None = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
-    applications = db.query(JobApplication).filter(
+    query = db.query(JobApplication).filter(
         JobApplication.user_id == current_user.id
-    ).all()
+    )
 
-    return applications
+    if status is not None:
+        query = query.filter(JobApplication.status == status)
+
+    return query.all()
 
 
 

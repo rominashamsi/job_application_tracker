@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field, ConfigDict
 from datetime import date
 from typing import Literal
+from pydantic import Field
 
 
 
@@ -53,7 +54,7 @@ class JobApplicationUpdate(BaseModel):
     status: Literal["applied", "interview", "offer", "rejected"] | None = None
     job_url: str | None = Field(default=None, max_length=500)
     notes: str | None = None
-    salary: int | None = None
+    salary: int | None = Field(default=None, ge=0)
 
 class PasswordChange(BaseModel):
     current_password: str
@@ -62,14 +63,3 @@ class PasswordChange(BaseModel):
 
 
 
-def test_update_job_application_rejects_negative_salary(client):
-    headers = _register_and_login(client)
-    application = _create_application(client, headers)
-
-    response = client.patch(
-        f"/job-applications/{application['id']}",
-        headers=headers,
-        json={"salary": -100}
-    )
-
-    assert response.status_code == 422

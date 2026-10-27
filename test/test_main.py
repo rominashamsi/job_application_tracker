@@ -656,3 +656,47 @@ def test_create_job_application_without_optional_fields(client):
     data = response.json()
     assert data["job_url"] is None
     assert data["notes"] is None
+
+
+
+def test_update_job_application_rejects_negative_salary(client):
+    headers = _register_and_login(client)
+    application = _create_application(client, headers)
+
+    response = client.patch(
+        f"/job-applications/{application['id']}",
+        headers=headers,
+        json={"salary": -100}
+    )
+
+    assert response.status_code == 422
+
+
+
+
+
+
+
+def test_filter_job_applications_by_status(client):
+    headers = _register_and_login(client)
+
+    google_app = _create_application(client, headers, company="Google")
+    _create_application(client, headers, company="Microsoft")
+
+    update_response = client.patch(
+        f"/job-applications/{google_app['id']}",
+        headers=headers,
+        json={"status": "interview"}
+    )
+    assert update_response.status_code == 200
+
+    response = client.get(
+        "/job-applications/?status=interview",
+        headers=headers
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 1
+    assert data[0]["company"] == "Google"
+    assert data[0]["status"] == "interview"
