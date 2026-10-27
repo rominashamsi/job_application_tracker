@@ -59,3 +59,17 @@ class PasswordChange(BaseModel):
     current_password: str
     new_password: str = Field(min_length=8, max_length=128)
     
+
+
+
+def test_update_job_application_rejects_negative_salary(client):
+    headers = _register_and_login(client)
+    application = _create_application(client, headers)
+
+    response = client.patch(
+        f"/job-applications/{application['id']}",
+        headers=headers,
+        json={"salary": -100}
+    )
+
+    assert response.status_code == 422
