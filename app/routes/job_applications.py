@@ -54,7 +54,10 @@ def get_job_applications(
     if status is not None:
         query = query.filter(JobApplication.status == status)
 
-    return query.all()
+    return query.order_by(
+    JobApplication.applied_date.desc(),
+    JobApplication.id.desc()
+).all()
 
 
 

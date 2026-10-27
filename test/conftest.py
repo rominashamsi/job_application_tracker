@@ -9,6 +9,7 @@ from app.database import Base, get_db
 from app.models import User, JobApplication
 
 
+
 test_engine = create_engine(
     "sqlite://",
     connect_args={"check_same_thread": False},
@@ -40,3 +41,7 @@ def client():
 
     app.dependency_overrides.clear()
     Base.metadata.drop_all(bind=test_engine)
+
+
+
+

@@ -1,5 +1,6 @@
-
-
+from datetime import date
+from app.models import JobApplication
+from conftest import TestingSessionLocal
 
 
 def test_home(client):
@@ -700,3 +701,32 @@ def test_filter_job_applications_by_status(client):
     assert len(data) == 1
     assert data[0]["company"] == "Google"
     assert data[0]["status"] == "interview"
+
+
+def test_job_applications_are_sorted_by_date_desc(client):
+    headers = _register_and_login(client)
+
+    older = _create_application(client, headers, company="Older Company")
+    newer = _create_application(client, headers, company="Newer Company")
+
+    db = TestingSessionLocal()
+    try:
+        db.query(JobApplication).filter(
+            JobApplication.id == older["id"]
+        ).update({"applied_date": date(2025, 1, 1)})
+
+        db.query(JobApplication).filter(
+            JobApplication.id == newer["id"]
+        ).update({"applied_date": date(2025, 2, 1)})
+
+        db.commit()
+    finally:
+        db.close()
+
+    response = client.get("/job-applications/", headers=headers)
+
+    assert response.status_code == 200
+    data = response.json()
+
+    assert data[0]["company"] == "Newer Company"
+    assert data[1]["company"] == "Older Company"
