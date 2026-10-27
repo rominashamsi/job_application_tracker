@@ -34,7 +34,7 @@ A backend application for tracking job applications, built with Python and FastA
 ### 1. Clone the repository
 
 ```bash
-git clone YOUR_REPOSITORY_URL
+git clone https://github.com/rominashamsi/job_application_tracker.git
 cd job_application_tracker
 ```
 
