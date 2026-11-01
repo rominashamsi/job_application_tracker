@@ -1,37 +1,57 @@
-
-# Job Application Tracker
+# CareerTrack – Job Application Tracker
 
 [![Python Tests](https://github.com/rominashamsi/job_application_tracker/actions/workflows/tests.yml/badge.svg)](https://github.com/rominashamsi/job_application_tracker/actions/workflows/tests.yml)
 
-A backend application for tracking job applications, built with Python and FastAPI.
+CareerTrack is a full-stack job application tracking platform built with **Python, FastAPI, Vue.js, and PostgreSQL**. It helps users organize their job applications, monitor their application progress, and prepare for interviews using an AI-powered interview assistant.
 
 ## Features
 
-- User registration and login
-- Password hashing with Argon2id
-- JWT-based authentication with token expiration
-- Change password functionality
-- Create, retrieve, update, and delete job applications
-- User-specific access control for job application records
-- Job application status tracking
-- Optional salary field
-- Request validation using Pydantic
-- Database management with PostgreSQL and SQLAlchemy
-- Database migrations with Alembic
-- Automated API tests using pytest
+### Job Application Management
+- Create, view, update, and delete job applications.
+- Track application statuses.
+- Store company names, job titles, job links, notes, and optional salary information.
+- Filter applications by status.
+- View application statistics on the dashboard.
+- User-specific access control.
+
+### Authentication
+- User registration and login.
+- Password hashing with Argon2id.
+- JWT-based authentication with token expiration.
+- Change password functionality.
+
+### AI Interview Assistant
+- Generate role-specific interview questions using Google Gemini.
+- Generate additional sets of interview questions.
+- Include technical and behavioral questions.
+- Stream AI-generated responses progressively to the frontend.
 
 ## Tech Stack
 
+**Backend**
 - Python
 - FastAPI
-- PostgreSQL
 - SQLAlchemy
+- PostgreSQL
 - Pydantic
 - PyJWT
 - Alembic
-- pytest
 
-## Setup
+**Frontend**
+- Vue 3
+- TypeScript
+- Vite
+- HTML and CSS
+
+**AI Integration**
+- Google Gemini API
+
+**Testing and CI**
+- pytest
+- HTTPX
+- GitHub Actions
+
+## Project Setup
 
 ### 1. Clone the repository
 
@@ -40,14 +60,14 @@ git clone https://github.com/rominashamsi/job_application_tracker.git
 cd job_application_tracker
 ```
 
-### 2. Create a virtual environment
+### 2. Set up the Python environment
 
 ```powershell
 python -m venv venv
 .\venv\Scripts\Activate.ps1
 ```
 
-### 3. Install dependencies
+### 3. Install backend dependencies
 
 ```bash
 python -m pip install -r requirements.txt
@@ -55,31 +75,77 @@ python -m pip install -r requirements.txt
 
 ### 4. Configure environment variables
 
-Create a `.env` file in the project root and configure:
+Create a `.env` file in the project root.
 
-- `DATABASE_URL`: PostgreSQL connection string
-- `SECRET_KEY`: A securely generated JWT signing key
+Configure the following variables:
 
-Never commit real credentials or secret keys.
+```env
+DATABASE_URL=postgresql+psycopg://USER:PASSWORD@localhost:5432/job_application_tracker
+SECRET_KEY=your_secure_jwt_secret_key
+GEMINI_API_KEY=your_gemini_api_key
+```
 
-### 5. Apply database migrations
+Replace the placeholder values with your own configuration.
+
+Never commit real credentials, API keys, or secret keys to GitHub.
+
+### 5. Run database migrations
+
+Make sure PostgreSQL is running and the database has been created.
 
 ```bash
 python -m alembic upgrade head
 ```
 
-### 6. Run the application
+### 6. Run the backend
+
+From the project root:
 
 ```bash
-fastapi dev app/main.py
+python -m uvicorn app.main:app --reload
 ```
 
-Open the API documentation at:
+Backend API:
+
+http://127.0.0.1:8000
+
+Interactive API documentation:
 
 http://127.0.0.1:8000/docs
 
+### 7. Run the frontend
+
+Open a second terminal:
+
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+
+Open the frontend at:
+
+http://localhost:5173
+
 ## Running Tests
+
+Run the automated backend tests from the project root:
 
 ```bash
 python -m pytest -v
 ```
+
+AI integration tests use mocked responses, so automated tests do not require actual Gemini API requests.
+
+GitHub Actions automatically runs the test suite when changes are pushed to the repository.
+
+## Future Improvements
+
+- Resume upload and parsing.
+- AI-powered resume and job description matching.
+- Personalized interview feedback.
+- Interview history and progress tracking.
+
+## Author
+
+Developed as a full-stack software engineering project using Python, FastAPI, Vue.js, PostgreSQL, and Google Gemini.
