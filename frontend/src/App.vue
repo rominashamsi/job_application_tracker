@@ -8,6 +8,7 @@ import {
   createJobApplication,
   updateJobApplication,
   deleteJobApplication,
+  streamInterviewQuestions,
   type ApiJobApplication,
 } from './services/api'
 
@@ -51,7 +52,7 @@ const isCheckingSession = ref(true)
 const isLoggingIn = ref(false)
 const loginError = ref('')
 const authSuccess = ref('')
-const activeSection = ref<'dashboard' | 'applications'>('dashboard')
+const activeSection = ref<'dashboard' | 'applications'| 'ai-assistant'>('dashboard')
 const company = ref('')
 const jobTitle = ref('')
 const editingId = ref<number | null>(null)
@@ -65,6 +66,11 @@ const actionError = ref('')
 const isSavingApplication = ref(false)
 const updatingIds = ref<number[]>([])
 const deletingIds = ref<number[]>([])
+const aiJobTitle = ref('')
+const aiQuestions = ref('')
+const isGeneratingQuestions = ref(false)
+const aiError = ref('')
+const generatedForJobTitle = ref('')
 
 
 const filteredApplications = computed(() => {
@@ -423,6 +429,62 @@ async function confirmDeleteApplication() {
 }
 
 
+
+
+
+async function generateAIQuestions() {
+  aiError.value = ''
+
+  const currentJobTitle = aiJobTitle.value.trim()
+
+  if (!currentJobTitle) {
+    aiError.value = 'Please enter a job title.'
+    return
+  }
+
+  if (!accessToken.value) {
+    aiError.value = 'Please sign in again.'
+    return
+  }
+
+  const sameJobTitle =
+    generatedForJobTitle.value.toLowerCase() ===
+    currentJobTitle.toLowerCase()
+
+  const previousQuestions = sameJobTitle
+    ? aiQuestions.value.trim()
+    : ''
+
+  if (!sameJobTitle) {
+    aiQuestions.value = ''
+    generatedForJobTitle.value = currentJobTitle
+  } else if (previousQuestions) {
+    aiQuestions.value += '\n\n'
+  }
+
+  isGeneratingQuestions.value = true
+
+  try {
+    await streamInterviewQuestions(
+      accessToken.value,
+      currentJobTitle,
+      previousQuestions,
+      (chunk) => {
+        aiQuestions.value += chunk
+      },
+    )
+  } catch (error) {
+    aiError.value =
+      error instanceof Error
+        ? error.message
+        : 'Could not generate interview questions.'
+  } finally {
+    isGeneratingQuestions.value = false
+  }
+}
+
+
+
 </script>
 
 <template>
@@ -550,6 +612,15 @@ async function confirmDeleteApplication() {
   @click="activeSection = 'applications'"
 >
   ▤ &nbsp; Applications
+</button>
+
+<button
+  type="button"
+  class="nav-item"
+  :class="{ active: activeSection === 'ai-assistant' }"
+  @click="activeSection = 'ai-assistant'"
+>
+  ✦ &nbsp; AI Assistant
 </button>
 
 
@@ -816,6 +887,81 @@ async function confirmDeleteApplication() {
 
           </form>
         </article>
+        
+<article
+  v-if="activeSection === 'ai-assistant'"
+  class="panel ai-panel"
+>
+  <div class="panel-heading">
+    <div>
+      <h2>AI Interview Assistant</h2>
+      <p>
+        Generate interview questions tailored to your target job.
+      </p>
+    </div>
+  </div>
+
+  <div class="ai-form">
+    <label for="ai-job-title">Job title</label>
+
+    <input
+      id="ai-job-title"
+      v-model="aiJobTitle"
+      type="text"
+      placeholder="e.g. Junior Python Developer"
+      maxlength="150"
+    />
+
+    
+<button
+  type="button"
+  class="ai-generate-button"
+  :disabled="isGeneratingQuestions || !aiJobTitle.trim()"
+  @click="generateAIQuestions"
+>
+  {{
+    isGeneratingQuestions
+      ? 'Generating questions...'
+      : aiQuestions
+        ? 'Generate 5 More Questions'
+        : 'Generate Interview Questions'
+  }}
+</button>
+
+
+    <p v-if="aiError" class="error-message">
+      {{ aiError }}
+    </p>
+  </div>
+
+  <div
+    v-if="aiQuestions || isGeneratingQuestions"
+    class="ai-response"
+  >
+    <h3>Generated questions</h3>
+
+    <p
+      v-if="isGeneratingQuestions && !aiQuestions"
+      class="ai-loading"
+    >
+      Waiting for Gemini response...
+    </p>
+
+    <pre
+      v-if="aiQuestions"
+      class="ai-result"
+      aria-live="polite"
+    >{{ aiQuestions }}</pre>
+
+    <p
+      v-if="isGeneratingQuestions && aiQuestions"
+      class="ai-loading"
+    >
+      Receiving more text...
+    </p>
+  </div>
+</article>
+
       </section>
 
       <footer>CareerTrack · Job Application Tracker</footer>
@@ -1649,4 +1795,77 @@ footer {
   color: #64748b;
   font-size: 14px;
 }
+
+
+
+.ai-panel {
+  grid-column: 1 / -1;
+}
+
+.ai-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 600px;
+  margin-top: 20px;
+}
+
+.ai-form label {
+  color: #515c70;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.ai-form input {
+  font-size: 13px;
+}
+
+.ai-generate-button {
+  padding: 12px 16px;
+  color: #fff;
+  background: #4f65e8;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.ai-generate-button:hover {
+  background: #4055d4;
+}
+
+.ai-generate-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.ai-response {
+  margin-top: 28px;
+  padding-top: 22px;
+  border-top: 1px solid #edf0f5;
+}
+
+.ai-response h3 {
+  font-size: 15px;
+  margin: 0 0 14px;
+}
+
+.ai-result {
+  padding: 18px;
+  color: #30394a;
+  background: #f6f8fc;
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.ai-loading {
+  color: #657086;
+  font-size: 12px;
+}
+
 </style>

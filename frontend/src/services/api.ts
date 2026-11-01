@@ -207,3 +207,70 @@ export async function deleteJobApplication(
     )
   }
 }
+
+
+
+
+export async function streamInterviewQuestions(
+  token: string,
+  jobTitle: string,
+  previousQuestions: string,
+  onChunk: (chunk: string) => void,
+): Promise<void> {
+  const response = await fetch(
+    `${API_BASE_URL}/ai/interview-questions/stream`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        job_title: jobTitle,
+        previous_questions: previousQuestions || null,
+      }),
+    },
+  )
+
+  if (!response.ok) {
+    throw new Error(
+      await readErrorMessage(
+        response,
+        'Could not generate interview questions',
+      ),
+    )
+  }
+
+  if (!response.body) {
+    throw new Error('Streaming response is not available')
+  }
+
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder()
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+
+      if (done) {
+        break
+      }
+
+      const chunk = decoder.decode(value, {
+        stream: true,
+      })
+
+      if (chunk) {
+        onChunk(chunk)
+      }
+    }
+
+    const remainingText = decoder.decode()
+
+    if (remainingText) {
+      onChunk(remainingText)
+    }
+  } finally {
+    reader.releaseLock()
+  }
+}

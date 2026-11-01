@@ -1,6 +1,7 @@
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from .routes.ai import router as ai_router
 
 from .routes.auth import router as auth_router
 from .routes.job_applications import router as job_applications_router
@@ -23,7 +24,7 @@ app.add_middleware(
 
 app.include_router(auth_router)
 app.include_router(job_applications_router)
-
+app.include_router(ai_router)
 
 @app.get("/")
 def home():
