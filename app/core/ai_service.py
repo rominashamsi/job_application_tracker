@@ -9,24 +9,21 @@ from google.genai import types
 
 
 # Load environment variables from .env
-load_dotenv()
+def get_gemini_client():
+    load_dotenv()
 
-api_key = os.getenv("GEMINI_API_KEY")
+    api_key = os.getenv("GEMINI_API_KEY")
 
-if not api_key:
-    raise ValueError("GEMINI_API_KEY is missing")
+    if not api_key:
+        raise RuntimeError("GEMINI_API_KEY is missing")
 
-
-# Create Gemini client
-client = genai.Client(
-    api_key=api_key,
-    http_options=types.HttpOptions(
-        timeout=60_000,
-        retry_options=types.HttpRetryOptions(
-            attempts=1
+    return genai.Client(
+        api_key=api_key,
+        http_options=types.HttpOptions(
+            timeout=60_000,
+            retry_options=types.HttpRetryOptions(attempts=1),
         ),
-    ),
-)
+    )
 
 
 # Build the prompt for interview question generation
@@ -74,7 +71,7 @@ def generate_interview_questions(
     job_title: str,
     previous_questions: str | None = None,
 ) -> str:
-
+    client = get_gemini_client()
     prompt = _build_interview_prompt(
         job_title,
         previous_questions,
@@ -121,7 +118,7 @@ def stream_interview_questions(
     job_title: str,
     previous_questions: str | None = None,
 ) -> Iterator[str]:
-
+    client = get_gemini_client()
     prompt = _build_interview_prompt(
         job_title,
         previous_questions,
