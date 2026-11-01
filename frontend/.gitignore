@@ -37,3 +37,31 @@ __screenshots__/
 
 # Vite
 *.timestamp-*-*.mjs
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# Python testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# Local databases
+*.sqlite3
+*.db
+
+# Python tools
+.mypy_cache/
+.ruff_cache/

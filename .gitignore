@@ -14,3 +14,9 @@ __pycache__/
 
 # Local backup
 packages_backup.txt
+# Virtual environments
+venv/
+venv_old/
+.venv/
+env/
+ENV/
