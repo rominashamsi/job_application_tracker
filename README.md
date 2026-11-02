@@ -4,6 +4,30 @@
 
 CareerTrack is a full-stack job application tracking platform built with **Python, FastAPI, Vue.js, and PostgreSQL**. It helps users organize their job applications, monitor their application progress, and prepare for interviews using an AI-powered interview assistant.
 
+
+
+## Live Demo
+
+The application is deployed and publicly accessible:
+
+- **Live Application:** [CareerTrack](https://careertrack-frontend-3r7u.onrender.com)
+- **Backend API:** [Backend API](https://job-application-tracker-3gwb.onrender.com)
+- **API Documentation:** [Swagger UI](https://job-application-tracker-3gwb.onrender.com/docs)
+
+## Deployment & Infrastructure
+
+| Component | Technology / Platform |
+|---|---|
+| Frontend Hosting | Render |
+| Backend Hosting | Render |
+| Database | PostgreSQL on Neon |
+| Database Migrations | Alembic |
+| CI/CD | GitHub Actions |
+
+The frontend and backend are deployed separately on Render. The backend connects to a cloud-hosted PostgreSQL database on Neon through environment variables configured in Render.
+
+
+
 ## Features
 
 ### Job Application Management
