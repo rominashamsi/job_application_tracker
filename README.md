@@ -22,7 +22,7 @@ The application is deployed and publicly accessible:
 | Backend Hosting | Render |
 | Database | PostgreSQL on Neon |
 | Database Migrations | Alembic |
-| CI/CD | GitHub Actions |
+| CI | GitHub Actions |
 
 The frontend and backend are deployed separately on Render. The backend connects to a cloud-hosted PostgreSQL database on Neon through environment variables configured in Render.
 
