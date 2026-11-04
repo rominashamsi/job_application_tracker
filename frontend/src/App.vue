@@ -125,7 +125,7 @@ onMounted(async () => {
   }
 
   try {
-    const response = await fetch('http://127.0.0.1:8000/auth/me', {
+    const response = await fetch(`${API_BASE_URL}/auth/me`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
