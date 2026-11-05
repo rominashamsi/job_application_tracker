@@ -5,7 +5,7 @@ from sqlalchemy import pool
 
 from alembic import context
 from app.database import Base, DATABASE_URL
-from app.models import User, JobApplication
+from app.models import User, JobApplication, JobApplicationChunk
 
 
 # this is the Alembic Config object, which provides

@@ -33,6 +33,7 @@ class JobApplicationCreate(BaseModel):
     job_url : str | None = None
     notes : str | None = None
     salary: int | None = None
+    job_description: str | None = None
 
 class JobApplicationResponse(BaseModel):
     model_config = ConfigDict(from_attributes= True)
@@ -45,6 +46,7 @@ class JobApplicationResponse(BaseModel):
     notes : str | None = None
     applied_date : date
     salary: int | None
+    job_description: str | None = None
 
 
 class JobApplicationUpdate(BaseModel):
@@ -55,6 +57,7 @@ class JobApplicationUpdate(BaseModel):
     job_url: str | None = Field(default=None, max_length=500)
     notes: str | None = None
     salary: int | None = Field(default=None, ge=0)
+    job_description: str | None = None
 
 class PasswordChange(BaseModel):
     current_password: str

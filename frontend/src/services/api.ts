@@ -24,6 +24,7 @@ export interface ApiJobApplication {
   job_url: string | null
   notes: string | null
   salary: number | null
+  job_description: string | null
 }
 
 export interface CreateJobApplicationInput {
@@ -32,6 +33,7 @@ export interface CreateJobApplicationInput {
   job_url?: string | null
   notes?: string | null
   salary?: number | null
+  job_description?: string | null
 }
 
 async function readErrorMessage(
@@ -148,7 +150,6 @@ export async function createJobApplication(
   return response.json() as Promise<ApiJobApplication>
 }
 
-
 export interface UpdateJobApplicationInput {
   company?: string
   job_title?: string
@@ -156,6 +157,7 @@ export interface UpdateJobApplicationInput {
   job_url?: string | null
   notes?: string | null
   salary?: number | null
+  job_description?: string | null
 }
 
 export async function updateJobApplication(
@@ -187,7 +189,6 @@ export async function updateJobApplication(
   return response.json()
 }
 
-
 export async function deleteJobApplication(
   token: string,
   id: number,
@@ -208,9 +209,6 @@ export async function deleteJobApplication(
     )
   }
 }
-
-
-
 
 export async function streamInterviewQuestions(
   token: string,

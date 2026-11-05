@@ -1,6 +1,6 @@
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import {
   login,
   register,
@@ -12,7 +12,6 @@ import {
   type ApiJobApplication,
 } from './services/api'
 
-import { onMounted } from 'vue'
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'
 
@@ -29,6 +28,7 @@ interface JobApplication {
   jobUrl: string | null
   salary: number | null
   notes: string | null
+  jobDescription: string | null
 }
 
 const statusToApi: Record<JobStatus, ApiJobApplication['status']> = {
@@ -53,13 +53,16 @@ const isCheckingSession = ref(true)
 const isLoggingIn = ref(false)
 const loginError = ref('')
 const authSuccess = ref('')
-const activeSection = ref<'dashboard' | 'applications'| 'ai-assistant'>('dashboard')
+const activeSection = ref<'dashboard' | 'applications' | 'ai-assistant'>('dashboard')
+
 const company = ref('')
 const jobTitle = ref('')
 const editingId = ref<number | null>(null)
 const jobUrl = ref('')
 const salary = ref('')
 const notes = ref('')
+const jobDescription = ref('')
+
 const selectedStatus = ref<FilterStatus>('All')
 const searchQuery = ref('')
 const errorMessage = ref('')
@@ -67,12 +70,28 @@ const actionError = ref('')
 const isSavingApplication = ref(false)
 const updatingIds = ref<number[]>([])
 const deletingIds = ref<number[]>([])
+
 const aiJobTitle = ref('')
 const aiQuestions = ref('')
 const isGeneratingQuestions = ref(false)
 const aiError = ref('')
 const generatedForJobTitle = ref('')
 
+
+// RAG Job Assistant
+const selectedRagApplicationId = ref('')
+const ragQuestion = ref('')
+const ragAnswer = ref('')
+const ragSources = ref<string[]>([])
+const ragError = ref('')
+const isAskingRag = ref(false)
+
+
+const applicationsWithDescription = computed(() =>
+  applications.value.filter(
+    (application) => Boolean(application.jobDescription?.trim())
+  )
+)
 
 const filteredApplications = computed(() => {
   const query = searchQuery.value.trim().toLowerCase()
@@ -111,10 +130,10 @@ const interviewCount = computed(
 const offerCount = computed(
   () => applications.value.filter((item) => item.status === 'Offer').length,
 )
+
 const rejectedCount = computed(
   () => applications.value.filter((item) => item.status === 'Rejected').length,
 )
-
 
 
 onMounted(async () => {
@@ -154,7 +173,6 @@ onMounted(async () => {
 })
 
 
-
 function formatApplicationDate(date: string) {
   const parsedDate = new Date(date)
 
@@ -170,9 +188,6 @@ function formatApplicationDate(date: string) {
 }
 
 
-
-
-
 function mapApplication(application: ApiJobApplication): JobApplication {
   const statusLabels: Record<ApiJobApplication['status'], JobStatus> = {
     applied: 'Applied',
@@ -182,22 +197,25 @@ function mapApplication(application: ApiJobApplication): JobApplication {
   }
 
   return {
-  id: application.id,
-  company: application.company,
-  jobTitle: application.job_title,
-  status: statusLabels[application.status],
-  appliedDate: application.applied_date,
-  jobUrl: application.job_url,
-  salary: application.salary,
-  notes: application.notes,
+    id: application.id,
+    company: application.company,
+    jobTitle: application.job_title,
+    status: statusLabels[application.status],
+    appliedDate: application.applied_date,
+    jobUrl: application.job_url,
+    salary: application.salary,
+    notes: application.notes,
+    jobDescription: application.job_description,
+  }
 }
-}
+
 
 function switchAuthMode() {
   authMode.value = authMode.value === 'login' ? 'register' : 'login'
   loginError.value = ''
   authSuccess.value = ''
 }
+
 
 async function handleAuthSubmit() {
   loginError.value = ''
@@ -233,6 +251,7 @@ async function handleAuthSubmit() {
   }
 }
 
+
 function logout() {
   accessToken.value = ''
   localStorage.removeItem('accessToken')
@@ -245,6 +264,7 @@ function logout() {
   jobUrl.value = ''
   salary.value = ''
   notes.value = ''
+  jobDescription.value = ''
   selectedStatus.value = 'All'
   isAuthenticated.value = false
   authMode.value = 'login'
@@ -262,10 +282,9 @@ function editApplication(application: JobApplication) {
   jobUrl.value = application.jobUrl ?? ''
   salary.value = application.salary?.toString() ?? ''
   notes.value = application.notes ?? ''
+  jobDescription.value = application.jobDescription ?? ''
   errorMessage.value = ''
 }
-
-
 
 
 async function addApplication() {
@@ -282,7 +301,6 @@ async function addApplication() {
   }
 
   const salaryText = String(salary.value ?? '').trim()
-
   const salaryValue =
     salaryText !== '' ? Number(salaryText) : null
 
@@ -303,6 +321,7 @@ async function addApplication() {
       job_url: jobUrl.value.trim() || null,
       salary: salaryValue,
       notes: notes.value.trim() || null,
+      job_description: jobDescription.value.trim() || null,
     }
 
     if (editingId.value !== null) {
@@ -315,6 +334,7 @@ async function addApplication() {
           job_url: applicationData.job_url,
           salary: applicationData.salary,
           notes: applicationData.notes,
+          job_description: applicationData.job_description,
         },
       )
 
@@ -340,6 +360,7 @@ async function addApplication() {
     jobUrl.value = ''
     salary.value = ''
     notes.value = ''
+    jobDescription.value = ''
     selectedStatus.value = 'All'
   } catch (error) {
     errorMessage.value =
@@ -352,7 +373,10 @@ async function addApplication() {
 }
 
 
-async function handleStatusChange(application: JobApplication, event: Event) {
+async function handleStatusChange(
+  application: JobApplication,
+  event: Event
+) {
   const select = event.target
 
   if (!(select instanceof HTMLSelectElement)) {
@@ -374,8 +398,8 @@ async function handleStatusChange(application: JobApplication, event: Event) {
       accessToken.value,
       application.id,
       {
-    status: statusToApi[newStatus],
-  },
+        status: statusToApi[newStatus],
+      },
     )
 
     const index = applications.value.findIndex(
@@ -400,6 +424,7 @@ async function handleStatusChange(application: JobApplication, event: Event) {
 function removeApplication(application: JobApplication) {
   applicationToDelete.value = application
 }
+
 
 async function confirmDeleteApplication() {
   const application = applicationToDelete.value
@@ -428,9 +453,6 @@ async function confirmDeleteApplication() {
     isDeletingApplication.value = false
   }
 }
-
-
-
 
 
 async function generateAIQuestions() {
@@ -484,16 +506,74 @@ async function generateAIQuestions() {
   }
 }
 
+async function askJobDescription() {
+  ragError.value = ''
+  ragAnswer.value = ''
+  ragSources.value = []
+
+  const question = ragQuestion.value.trim()
+  const applicationId = Number(selectedRagApplicationId.value)
+
+  if (!applicationId) {
+    ragError.value = 'Please select a job application.'
+    return
+  }
+
+  if (!question) {
+    ragError.value = 'Please enter a question.'
+    return
+  }
+
+  if (!accessToken.value) {
+    ragError.value = 'Please sign in again.'
+    return
+  }
+
+  isAskingRag.value = true
+
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/job-applications/${applicationId}/ask`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken.value}`,
+        },
+        body: JSON.stringify({ question }),
+      }
+    )
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      throw new Error(data.detail || 'Could not get an answer.')
+    }
+
+    ragAnswer.value = data.answer
+    ragSources.value = data.sources || []
+
+  } catch (error) {
+    ragError.value =
+      error instanceof Error
+        ? error.message
+        : 'Something went wrong.'
+
+  } finally {
+    isAskingRag.value = false
+  }
+}
+
 
 
 </script>
 
 <template>
   <div v-if="isCheckingSession" class="session-loading">
-  Loading your workspace...
-</div>
+    Loading your workspace...
+  </div>
 
-<div v-else-if="!isAuthenticated" class="login-page">
+  <div v-else-if="!isAuthenticated" class="login-page">
     <article class="panel login-panel">
       <div class="brand">
         <span class="brand-icon">CT</span>
@@ -591,39 +671,40 @@ async function generateAIQuestions() {
   <div v-else class="app-layout">
     <aside class="sidebar">
       <div class="brand">
-        <span class="brand-icon"><img src="/career-track.svg" alt="CareerTrack" /></span>
+        <span class="brand-icon">
+          <img src="/career-track.svg" alt="CareerTrack" />
+        </span>
         <span>CareerTrack</span>
       </div>
 
       <p class="nav-label">WORKSPACE</p>
-      
-<button
-  type="button"
-  class="nav-item"
-  :class="{ active: activeSection === 'dashboard' }"
-  @click="activeSection = 'dashboard'"
->
-  ▦ &nbsp; Dashboard
-</button>
 
-<button
-  type="button"
-  class="nav-item"
-  :class="{ active: activeSection === 'applications' }"
-  @click="activeSection = 'applications'"
->
-  ▤ &nbsp; Applications
-</button>
+      <button
+        type="button"
+        class="nav-item"
+        :class="{ active: activeSection === 'dashboard' }"
+        @click="activeSection = 'dashboard'"
+      >
+        ▦ &nbsp; Dashboard
+      </button>
 
-<button
-  type="button"
-  class="nav-item"
-  :class="{ active: activeSection === 'ai-assistant' }"
-  @click="activeSection = 'ai-assistant'"
->
-  ✦ &nbsp; AI Assistant
-</button>
+      <button
+        type="button"
+        class="nav-item"
+        :class="{ active: activeSection === 'applications' }"
+        @click="activeSection = 'applications'"
+      >
+        ▤ &nbsp; Applications
+      </button>
 
+      <button
+        type="button"
+        class="nav-item"
+        :class="{ active: activeSection === 'ai-assistant' }"
+        @click="activeSection = 'ai-assistant'"
+      >
+        ✦ &nbsp; AI Assistant
+      </button>
 
       <div class="sidebar-bottom">
         <div class="avatar">CT</div>
@@ -698,9 +779,9 @@ async function generateAIQuestions() {
 
       <section class="content-grid">
         <article
-           v-if="activeSection === 'applications'"
+          v-if="activeSection === 'applications'"
           class="panel"
-          >
+        >
           <div class="panel-heading">
             <div>
               <h2>Your applications</h2>
@@ -708,21 +789,23 @@ async function generateAIQuestions() {
             </div>
 
             <div class="application-filters">
-             <input
-              v-model="searchQuery"
-              type="search"
-              placeholder="Search company or job title..."
-              aria-label="Search applications"
-            />
-            <select v-model="selectedStatus" aria-label="Filter by status">
-              <option value="All">All statuses</option>
-              <option value="Applied">Applied</option>
-              <option value="Interview">Interview</option>
-              <option value="Offer">Offer</option>
-              <option value="Rejected">Rejected</option>
-            </select>
+              <input
+                v-model="searchQuery"
+                type="search"
+                placeholder="Search company or job title..."
+                aria-label="Search applications"
+              />
+
+              <select v-model="selectedStatus" aria-label="Filter by status">
+                <option value="All">All statuses</option>
+                <option value="Applied">Applied</option>
+                <option value="Interview">Interview</option>
+                <option value="Offer">Offer</option>
+                <option value="Rejected">Rejected</option>
+              </select>
+            </div>
           </div>
-        </div>
+
           <div
             v-if="filteredApplications.length > 0"
             class="application-list"
@@ -740,17 +823,21 @@ async function generateAIQuestions() {
                 <strong>{{ application.jobTitle }}</strong>
                 <span>{{ application.company }}</span>
                 <small>{{ formatApplicationDate(application.appliedDate) }}</small>
-                
+
                 <a
                   v-if="application.jobUrl"
                   class="job-link"
                   :href="application.jobUrl"
                   target="_blank"
                   rel="noopener noreferrer"
-                >View job posting ↗</a>
+                >
+                  View job posting ↗
+                </a>
+
                 <small v-if="application.salary !== null">
                   Salary: {{ application.salary.toLocaleString() }}
                 </small>
+
                 <small v-if="application.notes" class="job-notes">
                   {{ application.notes }}
                 </small>
@@ -778,8 +865,8 @@ async function generateAIQuestions() {
                     <option value="Rejected">Rejected</option>
                   </select>
                 </label>
-                
-               <button
+
+                <button
                   type="button"
                   class="edit-button"
                   @click="editApplication(application)"
@@ -813,12 +900,11 @@ async function generateAIQuestions() {
         </article>
 
         <article
-  v-if="activeSection === 'applications'"
-  class="panel add-panel"
->
-          
+          v-if="activeSection === 'applications'"
+          class="panel add-panel"
+        >
           <h2>
-             {{ editingId !== null ? 'Edit application' : 'Add an application' }}
+            {{ editingId !== null ? 'Edit application' : 'Add an application' }}
           </h2>
 
           <p class="form-description">
@@ -844,7 +930,9 @@ async function generateAIQuestions() {
               required
             />
 
-            <label for="job-url">Job URL <span class="optional-label">(optional)</span></label>
+            <label for="job-url">
+              Job URL <span class="optional-label">(optional)</span>
+            </label>
             <input
               id="job-url"
               v-model="jobUrl"
@@ -852,7 +940,21 @@ async function generateAIQuestions() {
               placeholder="https://..."
             />
 
-            <label for="salary">Salary <span class="optional-label">(optional)</span></label>
+            <label for="job-description">
+              Job Description
+              <span class="optional-label">(optional)</span>
+            </label>
+            <textarea
+              id="job-description"
+              v-model="jobDescription"
+              rows="8"
+              maxlength="20000"
+              placeholder="Paste the full job description here..."
+            ></textarea>
+
+            <label for="salary">
+              Salary <span class="optional-label">(optional)</span>
+            </label>
             <input
               id="salary"
               v-model="salary"
@@ -862,7 +964,9 @@ async function generateAIQuestions() {
               placeholder="e.g. 30000"
             />
 
-            <label for="notes">Notes <span class="optional-label">(optional)</span></label>
+            <label for="notes">
+              Notes <span class="optional-label">(optional)</span>
+            </label>
             <textarea
               id="notes"
               v-model="notes"
@@ -875,135 +979,212 @@ async function generateAIQuestions() {
               {{ errorMessage }}
             </p>
 
-           
-           <button type="submit" :disabled="isSavingApplication">
-             {{
-              isSavingApplication
-              ? 'Saving...'
-              : editingId !== null
-                ? 'Update application'
-                : '+ Add application'
-             }}
-           </button>
-
+            <button type="submit" :disabled="isSavingApplication">
+              {{
+                isSavingApplication
+                  ? 'Saving...'
+                  : editingId !== null
+                    ? 'Update application'
+                    : '+ Add application'
+              }}
+            </button>
           </form>
         </article>
-        
-<article
-  v-if="activeSection === 'ai-assistant'"
-  class="panel ai-panel"
->
-  <div class="panel-heading">
-    <div>
-      <h2>AI Interview Assistant</h2>
-      <p>
-        Generate interview questions tailored to your target job.
-      </p>
-    </div>
-  </div>
 
-  <div class="ai-form">
-    <label for="ai-job-title">Job title</label>
+        <article
+          v-if="activeSection === 'ai-assistant'"
+          class="panel ai-panel"
+        >
+          <div class="panel-heading">
+            <div>
+              <h2>AI Interview Assistant</h2>
+              <p>
+                Generate interview questions tailored to your target job.
+              </p>
+            </div>
+          </div>
 
-    <input
-      id="ai-job-title"
-      v-model="aiJobTitle"
-      type="text"
-      placeholder="e.g. Junior Python Developer"
-      maxlength="150"
-    />
+          <div class="ai-form">
+            <label for="ai-job-title">Job title</label>
 
-    
-<button
-  type="button"
-  class="ai-generate-button"
-  :disabled="isGeneratingQuestions || !aiJobTitle.trim()"
-  @click="generateAIQuestions"
->
-  {{
-    isGeneratingQuestions
-      ? 'Generating questions...'
-      : aiQuestions
-        ? 'Generate 5 More Questions'
-        : 'Generate Interview Questions'
-  }}
-</button>
+            <input
+              id="ai-job-title"
+              v-model="aiJobTitle"
+              type="text"
+              placeholder="e.g. Junior Python Developer"
+              maxlength="150"
+            />
 
+            <button
+              type="button"
+              class="ai-generate-button"
+              :disabled="isGeneratingQuestions || !aiJobTitle.trim()"
+              @click="generateAIQuestions"
+            >
+              {{
+                isGeneratingQuestions
+                  ? 'Generating questions...'
+                  : aiQuestions
+                    ? 'Generate 5 More Questions'
+                    : 'Generate Interview Questions'
+              }}
+            </button>
 
-    <p v-if="aiError" class="error-message">
-      {{ aiError }}
-    </p>
-  </div>
+            <p v-if="aiError" class="error-message">
+              {{ aiError }}
+            </p>
+          </div>
 
-  <div
-    v-if="aiQuestions || isGeneratingQuestions"
-    class="ai-response"
-  >
-    <h3>Generated questions</h3>
+          <div
+            v-if="aiQuestions || isGeneratingQuestions"
+            class="ai-response"
+          >
+            <h3>Generated questions</h3>
 
-    <p
-      v-if="isGeneratingQuestions && !aiQuestions"
-      class="ai-loading"
-    >
-      Waiting for Gemini response...
-    </p>
+            <p
+              v-if="isGeneratingQuestions && !aiQuestions"
+              class="ai-loading"
+            >
+              Waiting for Gemini response...
+            </p>
 
-    <pre
-      v-if="aiQuestions"
-      class="ai-result"
-      aria-live="polite"
-    >{{ aiQuestions }}</pre>
+            <pre
+              v-if="aiQuestions"
+              class="ai-result"
+              aria-live="polite"
+            >{{ aiQuestions }}</pre>
 
-    <p
-      v-if="isGeneratingQuestions && aiQuestions"
-      class="ai-loading"
-    >
-      Receiving more text...
-    </p>
-  </div>
-</article>
+            <p
+              v-if="isGeneratingQuestions && aiQuestions"
+              class="ai-loading"
+            >
+              Receiving more text...
+            </p>
+          </div>
+                    <!-- RAG Job Assistant -->
+          <div class="ai-response rag-section">
+            <h2>AI Job Assistant</h2>
 
+            <p>
+              Ask questions about your saved job descriptions.
+            </p>
+
+            <div class="ai-form">
+              <label for="rag-job-application">
+                Select a job application
+              </label>
+
+              <select
+                id="rag-job-application"
+                v-model="selectedRagApplicationId"
+              >
+                <option value="" disabled>
+                  Choose a job application
+                </option>
+
+                <option
+                  v-for="application in applicationsWithDescription"
+                  :key="application.id"
+                  :value="String(application.id)"
+                >
+                  {{ application.jobTitle }} - {{ application.company }}
+                </option>
+              </select>
+
+              <p
+                v-if="applicationsWithDescription.length === 0"
+                class="ai-loading"
+              >
+                No job descriptions available. Add a job description
+                to one of your applications first.
+              </p>
+
+              <label for="rag-question">
+                Your question
+              </label>
+
+              <textarea
+                id="rag-question"
+                v-model="ragQuestion"
+                rows="4"
+                maxlength="2000"
+                placeholder="e.g. What skills are required for this position?"
+              ></textarea>
+
+              <button
+                type="button"
+                class="ai-generate-button"
+                :disabled="
+                  isAskingRag ||
+                  !selectedRagApplicationId ||
+                  !ragQuestion.trim()
+                "
+                @click="askJobDescription"
+              >
+                {{ isAskingRag ? 'Thinking...' : 'Ask AI' }}
+              </button>
+
+              <p v-if="ragError" class="error-message">
+                {{ ragError }}
+              </p>
+            </div>
+
+            <div v-if="ragAnswer" class="ai-response">
+              <h3>AI Answer</h3>
+
+              <pre class="ai-result">{{ ragAnswer }}</pre>
+
+              <details v-if="ragSources.length">
+                <summary>View source information</summary>
+
+                <pre
+                  v-for="(source, index) in ragSources"
+                  :key="index"
+                  class="ai-result"
+                >{{ source }}</pre>
+              </details>
+            </div>
+          </div>
+        </article>
       </section>
 
       <footer>CareerTrack · Job Application Tracker</footer>
-
     </main>
-    
-<div
-  v-if="applicationToDelete"
-  class="modal-overlay"
-  @click.self="applicationToDelete = null"
->
-  <div class="delete-modal">
-    <h2>Delete Application?</h2>
 
-    <p>
-      Are you sure you want to delete the application for
-      <strong>{{ applicationToDelete.company }}</strong>?
-      This action cannot be undone.
-    </p>
+    <div
+      v-if="applicationToDelete"
+      class="modal-overlay"
+      @click.self="applicationToDelete = null"
+    >
+      <div class="delete-modal">
+        <h2>Delete Application?</h2>
 
-    <div class="modal-actions">
-      <button
-        type="button"
-        class="cancel-button"
-        @click="applicationToDelete = null"
-      >
-        Cancel
-      </button>
+        <p>
+          Are you sure you want to delete the application for
+          <strong>{{ applicationToDelete.company }}</strong>?
+          This action cannot be undone.
+        </p>
 
-      <button
-        type="button"
-        class="confirm-delete-button"
-        :disabled="isDeletingApplication"
-        @click="confirmDeleteApplication"
-      >
-        {{ isDeletingApplication ? 'Deleting...' : 'Yes, Delete' }}
-      </button>
+        <div class="modal-actions">
+          <button
+            type="button"
+            class="cancel-button"
+            @click="applicationToDelete = null"
+          >
+            Cancel
+          </button>
+
+          <button
+            type="button"
+            class="confirm-delete-button"
+            :disabled="isDeletingApplication"
+            @click="confirmDeleteApplication"
+          >
+            {{ isDeletingApplication ? 'Deleting...' : 'Yes, Delete' }}
+          </button>
+        </div>
+      </div>
     </div>
-  </div>
-</div>
-
   </div>
 </template>
 
@@ -1081,8 +1262,6 @@ textarea {
   font-size: 19px;
   font-weight: 750;
 }
-
-
 
 .brand-icon img {
   width: 70px;
@@ -1234,7 +1413,6 @@ h1 {
   white-space: nowrap;
 }
 
-
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -1260,7 +1438,6 @@ h1 {
     grid-template-columns: 1fr;
   }
 }
-
 
 .stat-card,
 .panel {
@@ -1312,6 +1489,7 @@ h1 {
   gap: 15px;
   margin-bottom: 20px;
 }
+
 .application-filters {
   display: flex;
   align-items: center;
@@ -1340,6 +1518,7 @@ h1 {
     max-width: none;
   }
 }
+
 h2 {
   margin: 0;
   font-size: 16px;
@@ -1787,6 +1966,7 @@ footer {
   opacity: 0.6;
   cursor: not-allowed;
 }
+
 .session-loading {
   min-height: 100vh;
   display: flex;
@@ -1796,8 +1976,6 @@ footer {
   color: #64748b;
   font-size: 14px;
 }
-
-
 
 .ai-panel {
   grid-column: 1 / -1;
@@ -1868,5 +2046,4 @@ footer {
   color: #657086;
   font-size: 12px;
 }
-
 </style>
