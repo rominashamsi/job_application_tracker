@@ -322,3 +322,10 @@ The RAG pipeline has also been manually tested with saved job descriptions, incl
 ## Author
 
 Developed as a full-stack software engineering project using Python, FastAPI, Vue.js, PostgreSQL, pgvector, and Google Gemini.
+
+
+Developed by **[Romina Shamsi](https://github.com/rominashamsi)**.
+
+MSc in Computer Science and Engineering graduate from Politecnico di Milano, Italy.
+
+GitHub: https://github.com/rominashamsi
